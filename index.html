@@ -277,6 +277,7 @@ const SETTINGS = {
     bottomZone: { top: 1400, bottom: 1800 },                    // 角色區（Logo 在 y 1790–1820）
     drawIp: true                                                // 底圖自己畫了角色時改成 false
   },
+  ga4: "G-MJ31QW2HV1",                   // Google Analytics 4 評估 ID（留空 "" 即停用追蹤）
   kitAction: "https://app.kit.com/forms/9779228/subscriptions",
   instagram: "https://www.instagram.com/humanspace____/"
 };
@@ -364,13 +365,13 @@ const STATIC = {
       "這份結果只反映你這一次作答時的狀態，不代表固定的性格，也無法取代專業評估。",
       "作答時如果勾起不舒服的感受，可以隨時暫停，先照顧好自己，之後再回來。",
       "如果你最近持續感到低落、焦慮、難以入睡，或出現傷害自己的念頭，請不要獨自承受。找一位信任的人聊聊，或尋求專業協助。",
-      "分享結果時，只分享你願意讓別人知道的部分。你的作答只保存在這台裝置上，不會上傳。"
+      "分享結果時，只分享你願意讓別人知道的部分。你的每一題作答只保存在這台裝置上，不會上傳；我們只收集匿名的使用統計，例如完成人數與結果類型的分布。"
     ],
     care_en: [
       "Your result reflects how you answered this time. It doesn't describe a fixed personality, and it can't replace a professional assessment.",
       "If any question stirs up something uncomfortable, feel free to pause and look after yourself first. You can come back later.",
       "If you've been feeling low, anxious or unable to sleep for a while, or you're having thoughts of hurting yourself, you don't have to carry it alone. Talk to someone you trust, or reach out for professional support.",
-      "Share only what you're comfortable sharing. Your answers stay on this device and are never uploaded."
+      "Share only what you're comfortable sharing. Your individual answers stay on this device and are never uploaded; we only collect anonymous usage statistics, such as how many people finish and how result types are distributed."
     ],
     lines_title_zh: "需要有人聽你說時（台灣）", lines_title_en: "If you need someone to talk to (Taiwan)",
     lines: [
@@ -605,6 +606,31 @@ function loadImg(src) {
   return imgCache[src];
 }
 
+/* ---------- analytics (GA4) — anonymous funnel events only, never individual answers ---------- */
+const sent = new Set();
+function track(name, params = {}, once = false) {
+  if (once) { if (sent.has(name)) return; sent.add(name); }
+  if (typeof window.gtag === "function") window.gtag("event", name, { quiz: "the_voice_within", lang: st.lang, ...params });
+}
+function initAnalytics() {
+  const id = SETTINGS.ga4; if (!id || isPreview()) return;   // the Claude preview blocks outside scripts
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  window.gtag("js", new Date());
+  window.gtag("config", id, { page_title: "The Voice Within" });
+  const sc = document.createElement("script"); sc.async = true; sc.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(id); document.head.append(sc);
+}
+function trackScreen(prev, next) {
+  if (next === "ch2" && prev.startsWith("q:CH1")) track("chapter_done", { chapter: 1 });
+  if (next === "ch3" && prev.startsWith("q:CH2")) track("chapter_done", { chapter: 2 });
+  if (next === "dialogue" && prev.startsWith("q:CH3")) track("chapter_done", { chapter: 3 });
+  if (next === "map") { const r = L.compute(C, st.answers); if (r.complete) track("quiz_complete", { result: r.result_code || "tie", tie_state: r.tie_state, need: r.leading_need_codes.join("+"), voice: r.leading_voice_codes.join("+") }, true); }
+  if (next === "card") track("card_page", {}, true);
+  if (next === "listen") track("listen_view", {}, true);
+  if (next === "kit") track("email_view", {}, true);
+  if (next === "thanks") track("thanks_view", {}, true);
+}
+
 /* ---------- flow ---------- */
 const QS = { ch1: C.questions_ch1, ch2: C.questions_ch2, ch3: C.dialogue_prompts };
 const FLOW = ["cover",
@@ -628,7 +654,9 @@ function go(screen, dir) {
   const page = $("#page");
   const old = page.cloneNode(true); old.removeAttribute("id"); old.classList.add("turn");
   old.querySelectorAll("[id]").forEach(n => n.removeAttribute("id"));
+  const prevScreen = st.screen;
   st.screen = screen; card.stage = "cover"; card.rot = 0; save();
+  trackScreen(prevScreen, screen);
   window.scrollTo(0, 0);
   render();
   const pin = $("#page .pin"); if (pin) pin.scrollTop = 0;
@@ -967,8 +995,8 @@ async function submitKit(e) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = u().kitInvalid; return; }
   if (isPreview()) { msg.textContent = u().kitPreview; return; }
   $("#kitBtn").disabled = true; msg.textContent = u().kitSending;
-  try { await fetch(form.action, { method: "POST", mode: "no-cors", body: new FormData(form) }); msg.textContent = u().kitThanks; form.reset(); setTimeout(() => { if (st.screen === "kit") go("thanks", 1); }, 1600); }
-  catch (err) { form.target = "_blank"; form.submit(); msg.textContent = u().kitNewTab; }
+  try { await fetch(form.action, { method: "POST", mode: "no-cors", body: new FormData(form) }); msg.textContent = u().kitThanks; form.reset(); track("email_submit"); setTimeout(() => { if (st.screen === "kit") go("thanks", 1); }, 1600); }
+  catch (err) { track("email_submit", { method: "new_tab" }); form.target = "_blank"; form.submit(); msg.textContent = u().kitNewTab; }
   finally { $("#kitBtn").disabled = false; }
 }
 
@@ -977,7 +1005,7 @@ function vListen(r) {
   const rec = [onePlaylist(r)];   // always one playlist (see onePlaylist for ties)
   const pl = id => { const p = S.playlists.find(x => x.id === id), ok = p.url && /^https:\/\//.test(p.url);
     return `<div class="pl main"><b>${esc(p.name)}</b><p style="margin:.3em 0 .8em">${esc(zh() ? p.zh : p.en)}</p>
-    ${ok ? `<a class="btn primary spot" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(u().openSpotify)}</a>`
+    ${ok ? `<a class="btn primary spot" data-pl="${esc(p.id)}" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(u().openSpotify)}</a>`
          : `<button class="btn primary spot" type="button" disabled>${esc(u().openSpotify)}</button><p class="status">${esc(pick(S.listening.placeholder.zh, S.listening.placeholder.en))}</p>`}</div>`; };
   const anyUrl = rec.some(id => S.playlists.find(p => p.id === id).url);
   return `<p class="kicker">${esc(S.listening.title_en)}</p>
@@ -1047,7 +1075,8 @@ function canNext() { const s = st.screen; return !s.startsWith("q:") || !!st.ans
 
 document.addEventListener("click", e => {
   if (e.target.closest("#flip")) return doFlip();
-  if (e.target.closest("#cardFront")) return openSheet();
+  if (e.target.closest("#cardFront")) { track("card_view"); return openSheet(); }
+  const sp = e.target.closest("a.spot"); if (sp) { track("spotify_click", { playlist: sp.dataset.pl || "", link_url: sp.href }); return; }
   const o = e.target.closest(".opt");
   if (o) {
     if (busy) return;
@@ -1060,15 +1089,15 @@ document.addEventListener("click", e => {
     return;
   }
   const b = e.target.closest("[data-act],[data-go],[data-save]"); if (!b) return;
-  if (b.dataset.save) return saveCard(b.dataset.save);
+  if (b.dataset.save) { track("card_download", { side: card.stage === "back" ? "back" : "front" }); return saveCard(b.dataset.save); }
   if (b.dataset.go) return go(b.dataset.go);
   const a = b.dataset.act;
-  if (a === "next") { if (!busy && canNext()) step(1); }
+  if (a === "next") { if (!busy && canNext()) { if (st.screen === "cover") track("quiz_start", {}, true); step(1); } }
   else if (a === "prev") step(-1);
   else if (a === "flip") doFlip();
-  else if (a === "viewCard") openSheet();
+  else if (a === "viewCard") { track("card_view"); openSheet(); }
   else if (a === "closeGo") { closeSheet(); go("listen", 1); }
-  else if (a === "resume") go(st.from && st.from !== "cover" && st.from !== "backcover" ? st.from : (L.missing(C, st.answers).length ? "q:" + L.missing(C, st.answers)[0] : "map"), 1);
+  else if (a === "resume") track("quiz_resume", {}, true), go(st.from && st.from !== "cover" && st.from !== "backcover" ? st.from : (L.missing(C, st.answers).length ? "q:" + L.missing(C, st.answers)[0] : "map"), 1);
   else if (a === "restart") confirmRestart();
   else if (a === "qaLoad") { const v = $("#preset").value; st.answers = { ...(v[0] === "c" ? PRESETS.combos[v.slice(2)] : PRESETS.cases[+v.slice(2)].answers) }; clearHash(); go("map", 1); }
   else if (a === "qaExit") { clearHash(); render(); }
@@ -1089,10 +1118,11 @@ $("#book").addEventListener("touchend", e => {
   if (dx < 0 && canNext() && st.screen !== "cover" && st.screen !== "backcover") step(1);
   else if (dx > 0 && st.screen !== "cover") step(-1);
 }, { passive: true });
-$("#langBtn").addEventListener("click", () => { st.lang = zh() ? "en" : "zh"; save(); card.stage = "cover"; card.rot = 0; render(); });
+$("#langBtn").addEventListener("click", () => { st.lang = zh() ? "en" : "zh"; save(); track("language_switch", { to: st.lang }); card.stage = "cover"; card.rot = 0; render(); });
 window.addEventListener("hashchange", render);
 
-load(); render();
+load(); initAnalytics(); render();
+if (st.screen === "cover" && location.hash !== "#qa") track("quiz_view", {}, true);
 if (isPreview()) {
   window.claude.use("downloads").then(d => { downloads = d; /* save button in the sheet falls back to "press and hold" when unavailable */ }).catch(() => {});
 }
