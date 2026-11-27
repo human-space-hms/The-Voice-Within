@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>The Voice Within · Beta</title>
+<title>The Voice Within</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&display=swap">
@@ -244,6 +244,10 @@ select{min-height:44px;width:100%;border:1px solid var(--rule);border-radius:8px
 .pin[data-s="listen"] .pl.main{margin:16px 0 10px}
 .pin[data-s="listen"] .pl.main p{font-size:13px;line-height:1.75}
 .pin[data-s="listen"] .note{font-size:12px;text-align:center}
+.hold{position:fixed;inset:0;z-index:60;background:rgba(25,20,10,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+.hold img{max-height:72vh;max-width:100%;border-radius:12px;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+.holdtip{color:#f8f2e9;font-size:14px;margin:0;text-align:center}
+.hold .btn{color:#f8f2e9;border-color:rgba(248,242,233,.6);min-width:120px}
 </style>
 </head>
 <body>
@@ -533,7 +537,7 @@ const UI = {
     toCard: "抽出你的反思卡", toKit: "繼續", toListen: "前往聆聽室", toMap: "翻開你的內在地圖", toBack: "參考依據與使用提醒", toThanks: "下一頁", thanksTitle: "謝謝你，給自己這段時間。", thanksBody: "願你帶著這份理解，溫柔地回到生活裡。",
     fields: { need_pattern: "你的需求", voice_pattern: "你的內在聲音", combined_insight: "兩者如何相遇", small_practice: "一個小練習", reflection_question: "給自己的提問" },
     ask: "給自己的提問", reminder: "溫柔的提醒",
-    tapReveal: "點一下，翻開你的卡片", tapFlip: "點一下翻面", flip: "翻面", saveCard: "儲存卡片",
+    tapReveal: "點一下，翻開你的卡片", tapFlip: "點一下翻面", flip: "翻面", saveCard: "儲存卡片", holdTip: "長按圖片，選「加入照片」即可存到相簿", holdClose: "完成",
     saveFront: "儲存正面", saveBack: "儲存背面", saveHint: "長按圖卡，儲存到相簿並分享到限時動態",
     noteLabel: "私人筆記（只存在這台裝置，不會出現在任何圖片中）", saved: "已交給裝置儲存", declined: "已取消儲存", saveFail: "無法在此儲存，請長按圖片儲存",
     backToMap: "回到內在地圖", listenRec: "為這次的你挑選", listenOther: "其他歌單", openSpotify: "前往 Spotify 聆聽你的歌單",
@@ -553,7 +557,7 @@ const UI = {
     toCard: "Draw your reflection card", toKit: "Continue", toListen: "Go to the listening room", toMap: "Open your inner map", toBack: "References & a note of care", toThanks: "Next", thanksTitle: "Thank you for giving yourself this time.", thanksBody: "May you carry this understanding gently back into your days.",
     fields: { need_pattern: "Your need", voice_pattern: "Your inner voice", combined_insight: "Where they meet", small_practice: "A small practice", reflection_question: "Reflection question" },
     ask: "A question for yourself", reminder: "Gentle reminder",
-    tapReveal: "Tap to reveal your card", tapFlip: "Tap to turn over", flip: "Turn over", saveCard: "Save card",
+    tapReveal: "Tap to reveal your card", tapFlip: "Tap to turn over", flip: "Turn over", saveCard: "Save card", holdTip: "Press and hold the image, then choose “Save to Photos”", holdClose: "Done",
     saveFront: "Save front", saveBack: "Save back", saveHint: "Press and hold the card to save it and share it to your Story",
     noteLabel: "Private note (stays on this device and never appears in any image)", saved: "Handed to your device to save", declined: "Save cancelled", saveFail: "Saving isn't available here — press and hold the image instead",
     backToMap: "Back to your inner map", listenRec: "Picked for you this time", listenOther: "Other playlists", openSpotify: "Listen to your playlist on Spotify",
@@ -953,7 +957,9 @@ async function paintCover() {
   ctx.font = `600 26px ${DISP}`; ctx.fillStyle = "#e7d9c9"; ctx.fillText("H U M A N   S P A C E", W / 2, H - 140);
   return cv;
 }
-const cardCanvases = {};
+const cardCanvases = {}, cardFiles = {};
+const inApp = /Line\/|Instagram|FBAN|FBAV|FB_IAB|Messenger|MicroMessenger|Threads|KAKAOTALK/i.test(navigator.userAgent);
+const isTouch = matchMedia("(pointer: coarse)").matches;
 async function drawCards(r) {
   const c = cardContent(r);
   try { await Promise.race([Promise.all([
@@ -964,17 +970,44 @@ async function drawCards(r) {
   // Scores are never passed to the painters.
   cardCanvases.front = front; cardCanvases.back = back;
   cardImgs.front = front.toDataURL("image/png"); cardImgs.back = back.toDataURL("image/png");
+  // Pre-build files so the share sheet can open straight from the tap (iOS needs it inside the gesture)
+  for (const k of ["front", "back"]) cardCanvases[k].toBlob(b => { if (b) cardFiles[k] = new File([b], `the-voice-within-${k}.png`, { type: "image/png" }); }, "image/png");
   const im = $("#cardFront"); if (im) im.src = cardImgs.front;
   const vb = $("#viewBtn"); if (vb) vb.disabled = false;
 }
-async function saveCard(kind) {
+function saveCard(kind) {
   if (kind === "current") kind = card.stage === "back" ? "back" : "front";
-  const cv = cardCanvases[kind]; if (!cv) return;
-  if (!isPreview()) { const a = document.createElement("a"); a.href = cardImgs[kind]; a.download = `the-voice-within-${kind}.png`; document.body.append(a); a.click(); a.remove(); return; }
-  if (!downloads) { toast(u().saveFail); return; }
-  const blob = await new Promise(res => cv.toBlob(res, "image/png"));
+  if (!cardCanvases[kind]) return;
+  // 1) Claude preview: the platform download capability
+  if (isPreview()) return previewSave(kind);
+  // 2) In-app browsers (LINE / IG / FB) block downloads: show the image to press and hold
+  if (inApp) return showHold(kind);
+  // 3) Phones & tablets: share sheet with the image file → "Save Image" goes straight to Photos
+  const f = cardFiles[kind];
+  if (isTouch && f && navigator.canShare && navigator.canShare({ files: [f] })) {
+    navigator.share({ files: [f] }).catch(err => { if (err && err.name !== "AbortError") showHold(kind); });
+    return;
+  }
+  // 4) Desktop browsers: a real file download
+  try {
+    const url = f ? URL.createObjectURL(f) : cardImgs[kind];
+    const a = document.createElement("a"); a.href = url; a.download = `the-voice-within-${kind}.png`; document.body.append(a); a.click(); a.remove();
+    if (f) setTimeout(() => URL.revokeObjectURL(url), 4000);
+    if (isTouch) setTimeout(() => showHold(kind), 300);   // older iOS may ignore download: offer press-and-hold too
+  } catch (e) { showHold(kind); }
+}
+async function previewSave(kind) {
+  if (!downloads) return showHold(kind);
+  const blob = await new Promise(res => cardCanvases[kind].toBlob(res, "image/png"));
   try { await downloads.save({ filename: `the-voice-within-${kind}.png`, data: blob }); toast(u().saved); }
-  catch (e) { toast(e && e.code === "declined" ? u().declined : u().saveFail); if (e && /unavailable|not_granted|capability/.test(e.code || "")) { downloads = null; } }
+  catch (e) { if (e && e.code === "declined") toast(u().declined); else showHold(kind); }
+}
+function showHold(kind) {
+  const old = $("#hold"); if (old) old.remove();
+  const d = document.createElement("div"); d.className = "hold"; d.id = "hold"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true");
+  d.innerHTML = `<p class="holdtip">${esc(u().holdTip)}</p><img src="${cardImgs[kind]}" alt="${esc(u().card)}"><button class="btn soft" data-act="holdClose">${esc(u().holdClose)}</button>`;
+  document.body.append(d);
+  d.addEventListener("click", e => { if (e.target === d || e.target.closest("[data-act=holdClose]")) { e.stopPropagation(); d.remove(); } });
 }
 
 /* ---------- Kit email ---------- */
