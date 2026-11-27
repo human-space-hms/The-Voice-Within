@@ -236,6 +236,14 @@ select{min-height:44px;width:100%;border:1px solid var(--rule);border-radius:8px
 @media (prefers-reduced-motion:reduce){.sflip{transition:none}.sheet,.sheet-panel{animation:none}}
 .closego{height:auto;min-height:44px;padding:8px 14px;line-height:1.4;white-space:normal}
 .closego .hl{color:#c4673f;font-weight:700}
+.closego .hl{color:var(--sun)}
+.btn.soft.closego .hl{color:#c4673f}
+.ltitle{font:700 19px/1.5 var(--serif)!important;margin:.3em 0 .5em!important}
+.ltitle:not(.zh){font:italic 700 20px/1.35 var(--display)!important}
+.lsub{font-size:13px;line-height:1.85;color:var(--muted);margin:0 0 4px}
+.pin[data-s="listen"] .pl.main{margin:16px 0 10px}
+.pin[data-s="listen"] .pl.main p{font-size:13px;line-height:1.75}
+.pin[data-s="listen"] .note{font-size:12px;text-align:center}
 </style>
 </head>
 <body>
@@ -326,7 +334,7 @@ const STATIC = {
     title_en: "Your Listening Room",
     subtitle_en: "Soundtracks for wherever you are right now.",
     heading_zh: "為現在的自己，留一段聲音的空間。",
-    body_zh: "有時候，我們需要的不是更多答案，而是一點能陪伴自己的時間。依照這次的探索結果，我們為你準備了幾份不同情境的歌單。無論你想休息、整理思緒，或只是找一點陪伴，都可以從這裡開始。",
+    body_zh: "有時候，我們需要的不是更多答案，而是一點陪伴自己的時間。依照這次的探索結果，為你挑選了一份歌單，就從這裡開始吧。",
     placeholder: { en: "Your listening room is being prepared.", zh: "你的聆聽空間正在準備中。" }
   },
   about: {
@@ -528,7 +536,7 @@ const UI = {
     saveFront: "儲存正面", saveBack: "儲存背面", saveHint: "長按圖卡，儲存到相簿並分享到限時動態",
     noteLabel: "私人筆記（只存在這台裝置，不會出現在任何圖片中）", saved: "已交給裝置儲存", declined: "已取消儲存", saveFail: "無法在此儲存，請長按圖片儲存",
     backToMap: "回到內在地圖", listenRec: "為這次的你挑選", listenOther: "其他歌單", openSpotify: "前往 Spotify 聆聽你的歌單",
-    spotifyNote: "會另開 Spotify，聽完回到這個分頁，你的卡片和結果都還在。", qrEgg: "小彩蛋：反思卡背面的 QR code，掃描就能回到你的歌單。",
+    spotifyNote: "會另開 Spotify，聽完回來，結果都還在。", qrEgg: "小彩蛋：反思卡背面的 QR code，掃描就能回到你的歌單。",
     incomplete: "還有題目尚未完成，完成後才會顯示結果。", goMissing: "前往未完成的題目", qa: "Beta 測試工具",
     endNote: "旅程到這裡告一段落。謝謝你給自己這段時間。", toCover: "回到封面", follow: "在 Instagram 找到我們",
     careShort: "這是一份自我探索的閱讀體驗，不是診斷。開始前可先閱讀", careLink: "使用提醒", card: "你的反思卡",
@@ -548,7 +556,7 @@ const UI = {
     saveFront: "Save front", saveBack: "Save back", saveHint: "Press and hold the card to save it and share it to your Story",
     noteLabel: "Private note (stays on this device and never appears in any image)", saved: "Handed to your device to save", declined: "Save cancelled", saveFail: "Saving isn't available here — press and hold the image instead",
     backToMap: "Back to your inner map", listenRec: "Picked for you this time", listenOther: "Other playlists", openSpotify: "Listen to your playlist on Spotify",
-    spotifyNote: "Spotify opens separately. Come back to this tab afterwards—your card and result will still be here.", qrEgg: "A little secret: the QR code on the back of your card leads back to your playlist.",
+    spotifyNote: "Opens in Spotify. Your results will still be here.", qrEgg: "A little secret: the QR code on the back of your card leads back to your playlist.",
     incomplete: "Some questions are still unanswered. Results appear once everything is complete.", goMissing: "Go to the unanswered question", qa: "Beta test tools",
     endNote: "This is the end of the journey for now. Thank you for giving yourself this time.", toCover: "Back to the cover", follow: "Find us on Instagram",
     careShort: "This is a self-reflection experience, not a diagnosis. Before you begin, you may want to read the", careLink: "Before you begin", card: "Your reflection card",
@@ -801,8 +809,8 @@ function openSheet() {
   d.innerHTML = `<div class="sheet-panel">
     <div class="sflip" id="flip" role="button" tabindex="0" aria-label="${esc(u().flip)}"><div class="face a"><img src="${cardImgs.front}" alt="${esc(u().front)}"></div><div class="face b"><img src="${cardImgs.back}" alt="${esc(u().backSide)}"></div></div>
     <p class="fliphint">${esc(u().tapCard)}</p>
-    <div class="sheet-btns"><button class="btn primary" data-save="current">${esc(u().dlCard)}</button>
-    <button class="btn soft closego" data-act="closeGo">${esc(u().closeGo).replace("{", "<b class=\"hl\">").replace("}", "</b>")}</button></div></div>`;
+    <div class="sheet-btns"><button class="btn primary closego" data-act="closeGo">${esc(u().closeGo).replace("{", "<b class=\"hl\">").replace("}", "</b>")}</button>
+    <button class="btn soft" data-save="current">${esc(u().dlCard)}</button></div></div>`;
   document.body.append(d); d.querySelector("#flip").focus();
   d.addEventListener("click", e => { if (e.target === d) closeSheet(); });
   d.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
@@ -973,8 +981,8 @@ function vListen(r) {
          : `<button class="btn primary spot" type="button" disabled>${esc(u().openSpotify)}</button><p class="status">${esc(pick(S.listening.placeholder.zh, S.listening.placeholder.en))}</p>`}</div>`; };
   const anyUrl = rec.some(id => S.playlists.find(p => p.id === id).url);
   return `<p class="kicker">${esc(S.listening.title_en)}</p>
-  <h1 class="${zh() ? "zh" : ""}" style="font-size:clamp(24px,6.4cqw,32px)">${esc(zh() ? S.listening.heading_zh : S.listening.subtitle_en)}</h1>
-  ${zh() ? `<p class="sub">${esc(S.listening.body_zh)}</p>` : ""}
+  <h1 class="ltitle ${zh() ? "zh" : ""}">${zh() ? esc(S.listening.heading_zh).replace("，", "，<br>") : esc(S.listening.subtitle_en)}</h1>
+  ${zh() ? `<p class="lsub">${esc(S.listening.body_zh)}</p>` : ""}
   ${rec.map(pl).join("")}
   ${anyUrl ? `<p class="note">${esc(u().spotifyNote)}</p>` : ""}
   <div class="nav"><button class="btn soft" data-act="prev">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().toThanks)}</button></div>`;
