@@ -6,7 +6,6 @@
 <title>The Voice Within · Beta</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" defer></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&display=swap">
 <style>/*
 VOICE: 大人的童書 — warm, unhurried, a little playful; a picture book you read alone.
@@ -49,7 +48,7 @@ button,textarea,select{font:inherit;color:inherit}
 .page.turn{z-index:3;pointer-events:none}
 .pin{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:8cqw 8cqw 12cqw 10cqw;display:flex;flex-direction:column}
 .pin::-webkit-scrollbar{display:none}
-.pin>.grow,.cover>.grow{flex:1 1 auto;min-height:2cqw}
+.pin>.grow,.cover>.grow,.opener>.grow{flex:1 1 auto;min-height:2cqw}
 .ribbon{position:absolute;top:-6px;right:20px;width:22px;height:74px;background:var(--ribbon);clip-path:polygon(0 0,100% 0,100% 100%,50% 82%,0 100%);box-shadow:0 2px 3px rgba(0,0,0,.12)}
 .folio{position:absolute;left:0;right:0;bottom:0;padding:5cqw 0 3.5cqw;background:linear-gradient(transparent,var(--paper2) 55%);pointer-events:none;text-align:center;font:italic 14px var(--display);color:var(--muted)}
 .logo{display:block;margin:0 auto 18px;text-align:center}
@@ -138,7 +137,7 @@ select{min-height:44px;width:100%;border:1px solid var(--rule);border-radius:8px
 @media (prefers-reduced-motion:reduce){.flip{transition:none}.deal{animation:none}}
 
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.logo img{width:24cqw;height:auto;display:inline-block}
+.logo img{width:26.4cqw;height:auto;display:inline-block}
 .cast{display:flex;justify-content:center;align-items:flex-end;gap:2%;margin:14px auto 6px;height:clamp(90px,24vw,130px)}
 .cast .ipc{height:100%;width:auto;filter:drop-shadow(0 6px 8px rgba(73,66,33,.15))}
 .cast .ipc:nth-child(2){height:112%}.cast .ipc:nth-child(4){height:118%}
@@ -166,7 +165,7 @@ select{min-height:44px;width:100%;border:1px solid var(--rule);border-radius:8px
 .ctitle{font:italic 500 9.8cqw/1.1 var(--display)!important;color:#c4673f;white-space:nowrap;margin:0 0 2.4cqw!important;letter-spacing:-.01em;text-align:center}
 .csub{font:600 4.1cqw/1.4 var(--serif);letter-spacing:.08em;margin:1cqw 0 0;color:var(--ink)}
 :lang(en) .csub{font:italic 500 4.8cqw/1.4 var(--display);color:var(--muted)}
-.cover .cast{height:19.8cqw;margin:0 auto;gap:0}
+.cover .cast{height:22.8cqw;margin:0 auto;gap:0}
 .lede{margin-bottom:5cqw}.lede p{margin:0 0 2.4cqw;white-space:nowrap;font-size:3.7cqw;line-height:1.8;color:var(--ink)}
 .lede.en p{font:italic 400 3.55cqw/1.7 var(--display);color:var(--ink)}
 .cbtns{display:grid;gap:2.6cqw;width:100%}
@@ -213,8 +212,9 @@ select{min-height:44px;width:100%;border:1px solid var(--rule);border-radius:8px
 .cover .cast .ipc:nth-child(5){height:100%;transform:translateY(-3cqw)}
 .cover .cast .ipc.bob{animation-name:bob2}
 @keyframes bob2{50%{translate:0 -5px;rotate:-1.5deg}}
-.opener{min-height:100%}
-.iprow.open .ipc{height:min(138px,32.5cqw)}
+.opener{flex:1 1 auto;min-height:0}
+.iprow.open .ipc{height:min(180px,42cqw)}
+.omet{margin:0 0 2px!important}
 .pin[data-s="card"] .nav{position:static;margin-top:calc(12cqw + 36px);padding-bottom:8px}
 .cardpage{display:flex;flex-direction:column;flex:0 0 100%;height:100%}
 .pin[data-s="card"]{padding-top:5cqw}
@@ -264,7 +264,7 @@ const SETTINGS = {
     width: 1080, height: 1920,
     front: { top: 150, bottom: 1360, left: 110, right: 970 },   // 文字安全區
     back:  { top: 150, bottom: 1360, left: 110, right: 970 },
-    bottomZone: { top: 1400, bottom: 1800 },                    // 角色／QR code 區（Logo 在 y 1790–1820）
+    bottomZone: { top: 1400, bottom: 1800 },                    // 角色區（Logo 在 y 1790–1820）
     drawIp: true                                                // 底圖自己畫了角色時改成 false
   },
   kitAction: "https://app.kit.com/forms/9779228/subscriptions",
@@ -690,8 +690,8 @@ function vChapter(ch) {
   <p class="kicker center">Chapter ${c.num} · ${esc(chAlt(ch))}</p>
   <h1 class="otitle ${zh() ? "zh" : ""}">${esc(chTitle(ch))}</h1>
   <p class="olede ${st.lang}">${esc(zh() ? c.lede_zh : c.lede_en).replace(/\n/g, "<br>")}</p>
-  <div class="grow"></div>${ipRow([CH_IP[ch]], "open")}
-  <p class="meta">${esc(ch === "ch3" ? u().questions3(QS[ch].length) : u().questions(QS[ch].length))}</p><div class="grow"></div></div>
+  <div class="grow"></div>${ipRow([CH_IP[ch]], "open")}<div class="grow"></div>
+  <p class="meta omet">${esc(ch === "ch3" ? u().questions3(QS[ch].length) : u().questions(QS[ch].length))}</p></div>
   <div class="nav"><button class="btn soft" data-act="prev">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().begin)}</button></div>`;
 }
 
@@ -892,13 +892,7 @@ async function paint(kind, content) {
     const h = ims.length > 1 ? 300 : 380, gap = 40, ws = ims.map(i => i.width / i.height * h); let x = (W - ws.reduce((a, b) => a + b + gap, -gap)) / 2;
     ims.forEach((im, i) => { ctx.drawImage(im, x, Z.bottom - 60 - h, ws[i], h); x += ws[i] + gap; });
   }
-  if (kind === "back" && content.playlistUrl && window.qrcode) {
-    try { const qr = qrcode(0, "M"); qr.addData(content.playlistUrl); qr.make(); const n = qr.getModuleCount(), size = 230, cell = size / n, x0 = (W - size) / 2, y0 = Z.top + 10;
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.roundRect(x0 - 18, y0 - 18, size + 36, size + 36, 18); ctx.fill(); ctx.fillStyle = "#2b2a26";
-      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) ctx.fillRect(x0 + c * cell, y0 + r * cell, Math.ceil(cell), Math.ceil(cell));
-      ctx.font = `italic 500 30px ${DISP}`; ctx.fillStyle = mut; ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillText(zh() ? "掃描，聽你的專屬歌單 ♪" : "Scan for your soundtrack ♪", W / 2, y0 + size + 34); } catch (e) {}
-  } else if (kind === "back" && SETTINGS.card.drawIp && !bg) {
+  if (kind === "back" && SETTINGS.card.drawIp && !bg) {
     const im = await loadImg(IMG.ip[content.chosenNeed] || IMG.ip.A); if (im) fitImg(ctx, im, W / 2, Z.bottom - 60, 300);
   }
   // small logo, bottom centre
@@ -980,7 +974,7 @@ function vListen(r) {
   <h1 class="${zh() ? "zh" : ""}" style="font-size:clamp(24px,6.4cqw,32px)">${esc(zh() ? S.listening.heading_zh : S.listening.subtitle_en)}</h1>
   ${zh() ? `<p class="sub">${esc(S.listening.body_zh)}</p>` : ""}
   ${rec.map(pl).join("")}
-  ${anyUrl ? `<p class="note">${esc(u().spotifyNote)}</p><p class="note">${esc(u().qrEgg)}</p>` : ""}
+  ${anyUrl ? `<p class="note">${esc(u().spotifyNote)}</p>` : ""}
   <div class="nav"><button class="btn soft" data-act="prev">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().toThanks)}</button></div>`;
 }
 
