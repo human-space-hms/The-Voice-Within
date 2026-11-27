@@ -234,6 +234,8 @@ select{min-height:44px;width:100%;border:1px solid var(--rule);border-radius:8px
 .sheet-btns{display:grid;gap:8px}
 .sheet-btns .btn{width:100%}
 @media (prefers-reduced-motion:reduce){.sflip{transition:none}.sheet,.sheet-panel{animation:none}}
+.closego{height:auto;min-height:44px;padding:8px 14px;line-height:1.4;white-space:normal}
+.closego .hl{color:#c4673f;font-weight:700}
 </style>
 </head>
 <body>
@@ -517,7 +519,7 @@ const KEY = "tvw.beta.v1";
 const UI = {
   zh: { start: "翻開這本書", resume: "繼續上次讀到的地方", startOver: "從頭開始", next: "下一頁", prev: "上一頁", back: "返回", cont: "繼續",
     restart: "重新開始", restartQ: "要從頭開始嗎？", restartBody: "目前所有作答與私人筆記都會清除。", cancel: "取消", confirm: "清除並重新開始",
-    lang: "EN", langLabel: "Switch to English", begin: "開始這一章", questions: n => `${n} 題，帶你認識自己`, questions3: n => `${n} 題，聽見自己的內心`, viewCard: "查看卡片", dlCard: "下載卡片", closeGo: "關閉並繼續", tapCard: "點卡片翻面",
+    lang: "EN", langLabel: "Switch to English", begin: "開始這一章", questions: n => `${n} 題，帶你認識自己`, questions3: n => `${n} 題，聽見自己的內心`, viewCard: "查看卡片", dlCard: "下載卡片", closeGo: "前往聆聽室，收取{專屬歌單}", tapCard: "點卡片翻面",
     leadNeed: "主要需求", leadVoice: "主要內在聲音", tie2Need: "兩項並列的需求", tie2Voice: "兩種並列的內在聲音",
     toCard: "抽出你的反思卡", toKit: "繼續", toListen: "前往聆聽室", toMap: "翻開你的內在地圖", toBack: "參考依據與使用提醒", toThanks: "下一頁", thanksTitle: "謝謝你，給自己這段時間。", thanksBody: "願你帶著這份理解，溫柔地回到生活裡。",
     fields: { need_pattern: "你的需求", voice_pattern: "你的內在聲音", combined_insight: "兩者如何相遇", small_practice: "一個小練習", reflection_question: "給自己的提問" },
@@ -537,7 +539,7 @@ const UI = {
     kitPreview: "預覽環境無法送出表單，正式網址上線後即可使用。", kitSkip: "先略過，前往聆聽室" },
   en: { start: "Open the book", resume: "Continue where you left off", startOver: "Start over", next: "Next", prev: "Previous", back: "Back", cont: "Continue",
     restart: "Restart", restartQ: "Start over?", restartBody: "All answers and your private note will be cleared.", cancel: "Cancel", confirm: "Clear and restart",
-    lang: "中文", langLabel: "切換至中文", begin: "Begin this chapter", questions: n => `${n} questions to help you know yourself`, questions3: n => `${n} questions to hear your inner voice`, viewCard: "View card", dlCard: "Download card", closeGo: "Close and continue", tapCard: "Tap the card to turn it over",
+    lang: "中文", langLabel: "切換至中文", begin: "Begin this chapter", questions: n => `${n} questions to help you know yourself`, questions3: n => `${n} questions to hear your inner voice`, viewCard: "View card", dlCard: "Download card", closeGo: "Go to the listening room for your {personal playlist}", tapCard: "Tap the card to turn it over",
     leadNeed: "Leading need", leadVoice: "Leading inner voice", tie2Need: "Two leading needs", tie2Voice: "Two leading inner voices",
     toCard: "Draw your reflection card", toKit: "Continue", toListen: "Go to the listening room", toMap: "Open your inner map", toBack: "References & a note of care", toThanks: "Next", thanksTitle: "Thank you for giving yourself this time.", thanksBody: "May you carry this understanding gently back into your days.",
     fields: { need_pattern: "Your need", voice_pattern: "Your inner voice", combined_insight: "Where they meet", small_practice: "A small practice", reflection_question: "Reflection question" },
@@ -601,7 +603,7 @@ const FLOW = ["cover",
   "ch1", ...QS.ch1.map(q => "q:" + q.id),
   "ch2", ...QS.ch2.map(q => "q:" + q.id),
   "ch3", ...QS.ch3.map(q => "q:" + q.id),
-  "dialogue", "map", "card", "kit", "listen", "thanks", "backcover"];
+  "dialogue", "map", "card", "listen", "kit", "thanks", "backcover"];
 const RESULT_SCREENS = ["dialogue", "map", "card", "kit", "listen", "thanks"];
 const allQ = [...QS.ch1, ...QS.ch2, ...QS.ch3];
 const qById = id => allQ.find(q => q.id === id);
@@ -790,7 +792,7 @@ function vCard() {
   return `<div class="cardpage"><div class="cardstage"><img id="cardFront" class="cardimg deal" alt="${esc(u().card)}"></div>
   <p class="savehint">${esc(u().saveHint)}</p>
   <div class="cardsave"><button class="btn primary" id="viewBtn" data-act="viewCard" disabled>${esc(u().viewCard)}</button></div></div>
-  <div class="nav"><button class="btn soft" data-go="map">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().toKit)}</button></div>`;
+  <div class="nav"><button class="btn soft" data-go="map">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().toListen)}</button></div>`;
 }
 function openSheet() {
   if (!cardImgs.front) return;
@@ -800,7 +802,7 @@ function openSheet() {
     <div class="sflip" id="flip" role="button" tabindex="0" aria-label="${esc(u().flip)}"><div class="face a"><img src="${cardImgs.front}" alt="${esc(u().front)}"></div><div class="face b"><img src="${cardImgs.back}" alt="${esc(u().backSide)}"></div></div>
     <p class="fliphint">${esc(u().tapCard)}</p>
     <div class="sheet-btns"><button class="btn primary" data-save="current">${esc(u().dlCard)}</button>
-    <button class="btn soft" data-act="closeGo">${esc(u().closeGo)}</button></div></div>`;
+    <button class="btn soft closego" data-act="closeGo">${esc(u().closeGo).replace("{", "<b class=\"hl\">").replace("}", "</b>")}</button></div></div>`;
   document.body.append(d); d.querySelector("#flip").focus();
   d.addEventListener("click", e => { if (e.target === d) closeSheet(); });
   d.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
@@ -949,7 +951,7 @@ function vKit() {
     <button type="submit" class="btn kitbtn" id="kitBtn">${esc(u().kitBtn)}</button>
     <p class="kit-msg" id="kitMsg" role="status"></p>
   </form><p class="kit-small">${esc(u().kitPrivacy)}</p></section>
-  <div class="nav"><button class="btn soft" data-act="prev">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().toListen)}</button></div>`;
+  <div class="nav"><button class="btn soft" data-act="prev">${esc(u().back)}</button><span class="grow"></span><button class="btn primary" data-act="next">${esc(u().toThanks)}</button></div>`;
 }
 async function submitKit(e) {
   e.preventDefault();
@@ -957,7 +959,7 @@ async function submitKit(e) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = u().kitInvalid; return; }
   if (isPreview()) { msg.textContent = u().kitPreview; return; }
   $("#kitBtn").disabled = true; msg.textContent = u().kitSending;
-  try { await fetch(form.action, { method: "POST", mode: "no-cors", body: new FormData(form) }); msg.textContent = u().kitThanks; form.reset(); }
+  try { await fetch(form.action, { method: "POST", mode: "no-cors", body: new FormData(form) }); msg.textContent = u().kitThanks; form.reset(); setTimeout(() => { if (st.screen === "kit") go("thanks", 1); }, 1600); }
   catch (err) { form.target = "_blank"; form.submit(); msg.textContent = u().kitNewTab; }
   finally { $("#kitBtn").disabled = false; }
 }
@@ -1057,7 +1059,7 @@ document.addEventListener("click", e => {
   else if (a === "prev") step(-1);
   else if (a === "flip") doFlip();
   else if (a === "viewCard") openSheet();
-  else if (a === "closeGo") { closeSheet(); step(1); }
+  else if (a === "closeGo") { closeSheet(); go("listen", 1); }
   else if (a === "resume") go(st.from && st.from !== "cover" && st.from !== "backcover" ? st.from : (L.missing(C, st.answers).length ? "q:" + L.missing(C, st.answers)[0] : "map"), 1);
   else if (a === "restart") confirmRestart();
   else if (a === "qaLoad") { const v = $("#preset").value; st.answers = { ...(v[0] === "c" ? PRESETS.combos[v.slice(2)] : PRESETS.cases[+v.slice(2)].answers) }; clearHash(); go("map", 1); }
