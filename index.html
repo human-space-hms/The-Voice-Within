@@ -281,7 +281,7 @@ const SETTINGS = {
     bottomZone: { top: 1400, bottom: 1800 },                    // 角色區（Logo 在 y 1790–1820）
     drawIp: true                                                // 底圖自己畫了角色時改成 false
   },
-  ga4: "G-MJ31QW2HV1",                   // Google Analytics 4 評估 ID（留空 "" 即停用追蹤）
+  analyticsScript: "/Library/analytics.js", // 與 Library 共用的 GA4＋同意橫幅（ID 在該檔案裡設定；留空 "" 即停用）
   kitAction: "https://app.kit.com/forms/9779228/subscriptions",
   instagram: "https://www.instagram.com/humanspace____/"
 };
@@ -617,12 +617,10 @@ function track(name, params = {}, once = false) {
   if (typeof window.gtag === "function") window.gtag("event", name, { quiz: "the_voice_within", lang: st.lang, ...params });
 }
 function initAnalytics() {
-  const id = SETTINGS.ga4; if (!id || isPreview()) return;   // the Claude preview blocks outside scripts
-  window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
-  window.gtag("js", new Date());
-  window.gtag("config", id, { page_title: "The Voice Within" });
-  const sc = document.createElement("script"); sc.async = true; sc.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent(id); document.head.append(sc);
+  // Shared with the Library site; HS_NO_BANNER = no popup in the quiz (respects a decline made on Library).
+  if (!SETTINGS.analyticsScript || isPreview()) return;   // the Claude preview blocks outside scripts
+  window.HS_NO_BANNER = true;   // 測驗不跳同意橫幅
+  const sc = document.createElement("script"); sc.src = SETTINGS.analyticsScript; sc.defer = true; document.head.append(sc);
 }
 function trackScreen(prev, next) {
   if (next === "ch2" && prev.startsWith("q:CH1")) track("chapter_done", { chapter: 1 });
